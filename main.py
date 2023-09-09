@@ -1,35 +1,39 @@
 import paho.mqtt.client as mqtt
-import docker
 import os
 from dotenv import load_dotenv
-import uuid  # For generating unique container names
+import uuid
+import re
+import subprocess
 
+# SETUP ENV 
 # Load environment variables from .env file
 load_dotenv()
-
 # MQTT settings
 MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST")
 MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT"))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC")
-
 # Docker settings
-DOCKER_IMAGE_NAME = os.getenv("DOCKER_IMAGE_NAME")
+DOCKER_CONTAINER_COMMAND = os.getenv("DOCKER_CONTAINER_COMMAND")
+DOCKER_CONTAINER_NAME_PREFIX = os.getenv("DOCKER_CONTAINER_NAME_PREFIX")
 
 # Function to generate a unique container name
-def generate_container_name():
-    return f"{os.getenv('DOCKER_CONTAINER_NAME')}-{str(uuid.uuid4())[:8]}"
+# def generate_container_name():
+#     random_str = str(uuid.uuid4())[:8]
+#     # Remove any characters that are not allowed in container names
+#     sanitized_str = re.sub(r'[^a-z0-9_]', '_', random_str)
+#     return f"{DOCKER_CONTAINER_NAME_PREFIX}-{sanitized_str}"
 
 # Function to start a Docker container with a given payload
 def start_container(payload):
-    client = docker.from_env()
-    container_name = generate_container_name()
-    container = client.containers.run(
-        DOCKER_IMAGE_NAME,
-        detach=True,
-        name=container_name,
-        environment={"PAYLOAD": payload},
-    )
-    print(f"Container {container.name} started with payload: {payload}")
+    # container_name = generate_container_name()
+    try:
+        # Run the Docker command
+        subprocess.run(DOCKER_CONTAINER_COMMAND, shell=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting container: {e}")
+
+
+
 
 # MQTT on_connect callback
 def on_connect(client, userdata, flags, rc):
