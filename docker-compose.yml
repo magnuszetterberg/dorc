@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  orc:
+    image: orc
+    container_name: orc
+    env_file: 
+      - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: python3 main.py
