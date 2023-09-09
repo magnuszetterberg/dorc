@@ -27,9 +27,14 @@ def start_container(payload):
         print(f"Container started with payload: {payload}")
 
         # Create a dictionary for the response payload
-        response_payload = {
-            "active": RESPONSE_PAYLOAD
-        }
+        response_payload = [{
+            "name": "loop",
+            "status": RESPONSE_PAYLOAD
+        },
+        {    
+            "name": "loop",
+            "status": "starting"
+        }]
 
         # Convert the dictionary to a JSON string
         response_json = json.dumps(response_payload)
