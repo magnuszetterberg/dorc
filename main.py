@@ -15,21 +15,57 @@ MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT"))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC")
 RESPONSE_TOPIC = os.getenv("RESPONSE_TOPIC")
 RESPONSE_PAYLOAD = os.getenv("RESPONSE_PAYLOAD")
-
+CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 # Docker settings
 DOCKER_CONTAINER_COMMAND = os.getenv("DOCKER_CONTAINER_COMMAND")
-DOCKER_CONTAINER_NAME_PREFIX = os.getenv("DOCKER_CONTAINER_NAME_PREFIX")
 
-# Function to start a Docker container with a given payload
+
+
+
+# Function to start a Docker container
 def start_container(payload):
     try:
+        start_obj_detection()
         subprocess.run([DOCKER_CONTAINER_COMMAND], shell=True)
-        print(f"Container started with payload: {payload}")
+        
+    
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting container: {e}")
 
+#Function to stop a Docker container
+def stop_container(container_name):
+    try:
+        stop_obj_detection()
+        subprocess.run(["docker", "stop", container_name])
+        print(f"Container {container_name} stopped successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"Error stopping container: {e}")
+
+# Function to parse the MQTT payload and trigger container creation
+def handle_mqtt_payload(payload):
+    try:
+        payload_dict = json.loads(payload)
+        #agent = payload_dict.get("task", {}).get("params", {}).get("agent", "")
+        task_name = payload_dict.get("task", {}).get("name", "")
+        
+        if task_name == "start-object-detection":
+            start_container(payload)
+        
+        else:
+            if task_name == "stop-object-detection":
+                stop_container(CONTAINER_NAME)
+
+                
+    except json.JSONDecodeError as e:
+        print(f"Error decoding MQTT payload: {e}")
+
+#Function to start a object-detection
+def start_obj_detection():
+    try:
         # Create a dictionary for the response payload
         response_payload = [{
             "name": "loop",
-            "status": RESPONSE_PAYLOAD
+            "status": "running"
         },
         {    
             "name": "loop",
@@ -41,8 +77,31 @@ def start_container(payload):
 
         # Publish the JSON message back to the specified topic
         publish.single(RESPONSE_TOPIC, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+        
     except subprocess.CalledProcessError as e:
         print(f"Error starting container: {e}")
+
+#Function to start a object-detection
+def stop_obj_detection():
+    try:
+        # Create a dictionary for the response payload
+        response_payload = [{
+            "name": "loop",
+            "status": "running"
+        }]
+
+        # Convert the dictionary to a JSON string
+        response_json = json.dumps(response_payload)
+
+        # Publish the JSON message back to the specified topic
+        publish.single(RESPONSE_TOPIC, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Error starting container: {e}")
+
+
+
+
 
 # MQTT on_connect callback
 def on_connect(client, userdata, flags, rc):
@@ -53,7 +112,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     payload = msg.payload.decode("utf-8")
     print(f"Received payload: {payload}")
-    start_container(payload)
+    handle_mqtt_payload(payload)
 
 # Create MQTT client
 mqtt_client = mqtt.Client()
