@@ -8,7 +8,6 @@ import threading
 import time
 import uuid
 
-# SETUP ENV
 # Load environment variables from .env file
 load_dotenv()
 # MQTT settings
@@ -19,7 +18,6 @@ RESPONSE_TOPIC = os.getenv("RESPONSE_TOPIC")
 RESPONSE_PAYLOAD = os.getenv("RESPONSE_PAYLOAD")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 # Docker settings
-DOCKER_CONTAINER_COMMAND = os.getenv("DOCKER_CONTAINER_COMMAND")
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE")
 DOCKER_RUN = os.getenv("DOCKER_RUN")
 DOCKER_RM = os.getenv("DOCKER_RM")
@@ -60,13 +58,16 @@ def handle_mqtt_payload(payload):
     try:
         payload_dict = json.loads(payload)
         task_name = payload_dict.get("task", {}).get("name", "")
-        print(task_name)
+
         if task_name == "start-object-detection": 
             start_container(DOCKER_RUN, payload)
+
         elif task_name == "stop-object-detection":
             stop_container(DOCKER_STOP, payload)
+
         else:
             pass
+
     except json.JSONDecodeError as e:
         print(f"Error decoding MQTT payload: {e}")
 
@@ -104,9 +105,10 @@ def start_obj_detection(agent_name):
 
         response_json = json.dumps(response_payload)
 
-        msg=str(RESPONSE_TOPIC +"/"+ agent_name)
-
-        publish.single(msg, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+        #msg=str(RESPONSE_TOPIC +"/"+ agent_name)
+        
+        #publish.single(msg, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+        publish.single(RESPONSE_TOPIC, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
         
         # Call the publish_response function with data
         publish_response(AGENT_UUID, COM_UUID, RESPONSE_TO, TASK_UUID, response="starting", fail_reason="")
@@ -172,7 +174,7 @@ def stop_container(DOCKER_STOP, payload):
      
         docker_cmd = str(DOCKER_STOP.replace('XXXX', agent_name))
      
-        print("docker_cmd: ", docker_cmd)
+        #print("docker_cmd: ", docker_cmd)
         stop_obj_detection()
         
         # Start the subprocess and capture stdout
@@ -202,7 +204,7 @@ def remove_container(DOCKER_RM, payload):
      
         docker_cmd = str(DOCKER_RM.replace('XXXX', agent_name))
      
-        print("docker_cmd: ", docker_cmd)
+        #print("docker_cmd: ", docker_cmd)
         
         # Start the subprocess and capture stdout
         process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
