@@ -20,6 +20,11 @@ RESPONSE_PAYLOAD = os.getenv("RESPONSE_PAYLOAD")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 # Docker settings
 DOCKER_CONTAINER_COMMAND = os.getenv("DOCKER_CONTAINER_COMMAND")
+DOCKER_IMAGE = os.getenv("DOCKER_IMAGE")
+DOCKER_RUN = os.getenv("DOCKER_RUN")
+DOCKER_RM = os.getenv("DOCKER_RM")
+DOCKER_STOP = os.getenv("DOCKER_STOP")
+
 # Create a constant agent_uuid for the entire session
 AGENT_UUID = str(uuid.uuid4())
 COM_UUID = str(uuid.uuid4())
@@ -55,55 +60,56 @@ def handle_mqtt_payload(payload):
     try:
         payload_dict = json.loads(payload)
         task_name = payload_dict.get("task", {}).get("name", "")
-        
+        print(task_name)
         if task_name == "start-object-detection": 
-            start_container(DOCKER_CONTAINER_COMMAND)
-
+            start_container(DOCKER_RUN, payload)
         elif task_name == "stop-object-detection":
-            stop_container(CONTAINER_NAME)
-        
+            stop_container(DOCKER_STOP, payload)
         else:
             pass
-    
     except json.JSONDecodeError as e:
         print(f"Error decoding MQTT payload: {e}")
 
 # Function to start a Docker container
-def start_container(DOCKER_CONTAINER_COMMAND):
+def start_container(DOCKER_RUN, payload):
     try:
-        start_obj_detection()
+        # Parse the MQTT payload to extract the "agent" value
+        payload_dict = json.loads(payload)
+        agent_name = payload_dict.get("task", {}).get("params", {}).get("agent", "")
+     
+        docker_cmd = str(DOCKER_RUN.replace('XXXX', agent_name))
+                
+        start_obj_detection(agent_name)
+        
         # Start the subprocess and capture stdout
-        process = subprocess.Popen(DOCKER_CONTAINER_COMMAND, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
         # Get the return code of the subprocess
         return_code = process.returncode
-        if return_code != 0:
-            print(f"Subprocess exited with return code: {return_code}")
-        else:
-            publish_feedback() # HÄR VILL JAG SKICKA FEEDBACK VIA FEEDBACK() ATT CONTAINER GICK UPP OM JAG INTE FÅ UT NÅN RETURN CODE
+        print(f"Subprocess exited with return code: {return_code}")
+
+        # Handle the return code as needed
 
     except subprocess.CalledProcessError as e:
         print(f"Error starting container: {e}")
 
 # Function to start object-detection
-def start_obj_detection():
+def start_obj_detection(agent_name):
 
     try:
-        response_payload = [{
-            "name": "loop",
-            "status": "running"
-        },
-        {    
-            "name": "loop",
+        response_payload = [{          
+            "name": agent_name,
             "status": "starting"
         }]
 
         response_json = json.dumps(response_payload)
 
-        publish.single(RESPONSE_TOPIC, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
+        msg=str(RESPONSE_TOPIC +"/"+ agent_name)
+
+        publish.single(msg, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
         
         # Call the publish_response function with data
-        publish_response(AGENT_UUID, COM_UUID, RESPONSE_TO, TASK_UUID, response="running", fail_reason="")
+        publish_response(AGENT_UUID, COM_UUID, RESPONSE_TO, TASK_UUID, response="starting", fail_reason="")
         
     except subprocess.CalledProcessError as e:
         print(f"Error starting container: {e}")
@@ -158,29 +164,57 @@ def publish_feedback(AGENT_UUID, COM_UUID, status, TASK_UUID):
 
 
 # Function to stop a Docker container
-def stop_container(container_name):
+def stop_container(DOCKER_STOP, payload):
     try:
+        # Parse the MQTT payload to extract the "agent" value
+        payload_dict = json.loads(payload)
+        agent_name = payload_dict.get("task", {}).get("params", {}).get("agent", "")
+     
+        docker_cmd = str(DOCKER_STOP.replace('XXXX', agent_name))
+     
+        print("docker_cmd: ", docker_cmd)
         stop_obj_detection()
+        
+        # Start the subprocess and capture stdout
+        process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        subprocess.Popen(["docker", "stop", container_name])
-        # Call the publish_response function with data
+        # Get the return code of the subprocess
+        return_code = process.returncode
+        print(f"Subprocess exited with return code: {return_code}")
 
-        time.sleep(4) #this might have to a be while loop to regulary check if it's done or not
-        remove_container(CONTAINER_NAME)
+        # Remove container
+
+        remove_container(DOCKER_RM, payload)
+
+        # Handle the return code as needed
 
     except subprocess.CalledProcessError as e:
-        print(f"Error stopping container: {e}")
+        print(f"Error starting container: {e}")
+
 
 # Function to remove a docker container
-def remove_container(container_name):
+def remove_container(DOCKER_RM, payload):
     try:
+        time.sleep(2)
+        # Parse the MQTT payload to extract the "agent" value
+        payload_dict = json.loads(payload)
+        agent_name = payload_dict.get("task", {}).get("params", {}).get("agent", "")
+     
+        docker_cmd = str(DOCKER_RM.replace('XXXX', agent_name))
+     
+        print("docker_cmd: ", docker_cmd)
+        
+        # Start the subprocess and capture stdout
+        process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        subprocess.Popen(["docker", "rm", container_name])
-        # Call the publish_response function with data
-  
+        # Get the return code of the subprocess
+        return_code = process.returncode
+        print(f"Subprocess exited with return code: {return_code}")
+
+        # Handle the return code as needed
 
     except subprocess.CalledProcessError as e:
-        print(f"Error stopping container: {e}")
+        print(f"Error starting container: {e}")
 
 
 # Function to stop object-detection
@@ -195,6 +229,7 @@ def stop_obj_detection():
 
         publish.single(RESPONSE_TOPIC, response_json, hostname=MQTT_BROKER_HOST, port=MQTT_BROKER_PORT)
         publish_response(AGENT_UUID, COM_UUID, RESPONSE_TO, TASK_UUID, response="stopped", fail_reason="")
+
     except subprocess.CalledProcessError as e:
         print(f"Error starting container: {e}")
 
@@ -207,7 +242,7 @@ def on_connect(client, userdata, flags, rc):
 # MQTT on_message callback
 def on_message(client, userdata, msg):
     payload = msg.payload.decode("utf-8")
-    #print(f"Received payload: {payload}")
+   # print(f"Received payload: {payload}")
     handle_mqtt_payload(payload)
 
 # Create MQTT client
