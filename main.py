@@ -79,12 +79,17 @@ def start_container(payload):
     agent_name = payload_dict.get("task", {}).get("params", {}).get("agent", "")
 
     client = docker.from_env()
+    stream_id = {
+        "stream_name": agent_name
+    }
     # Define container options
     container_options = {
         "detach": True,  # Run the container in detached mode (in the background)
         "name": agent_name,  # Set the name of the container
         #"privileged": True,  # Give the container extended privileges (needed for mounting Docker socket)
+        #"volumes": {"/usr/bin/ffmpeg": {"bind": "/usr/bin/ffmpeg", "mode": "rw"}},  # Mount the Docker socket
         "tty": True,  # Enable pseudo-TTY (equivalent to -t flag)
+        "environment": stream_id,
         "remove": True 
         }
         # Start the Docker container
