@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  orc:
+  dorc:
     image: dorc
     container_name: orc
     env_file: 
