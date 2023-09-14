@@ -20,9 +20,6 @@ RESPONSE_PAYLOAD = os.getenv("RESPONSE_PAYLOAD")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 # Docker settings
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE")
-DOCKER_RUN = os.getenv("DOCKER_RUN")
-DOCKER_RM = os.getenv("DOCKER_RM")
-DOCKER_STOP = os.getenv("DOCKER_STOP")
 
 # Create a constant agent_uuid for the entire session
 AGENT_UUID = str(uuid.uuid4())

@@ -36,7 +36,7 @@ def restream():
 
     print(f'****Trying to restream****')
     #rtmp_url = "rtmp://localhost/app/magnus_haris"
-    rtmp_url = f"rtmp://172.17.0.1/app/{stream_name}_haris"
+    rtmp_url = f"rtmp://172.30.161.103/app/{stream_name}_haris"
     #rtmp_url = "rtmp://ome.waraps.org/app/Piraya14_Haris"
 
     command = ['ffmpeg',
@@ -72,7 +72,7 @@ def restream():
     #coord = CoordTrans.CoordTrans(location="granso")
     counter = 0
 
-    cap = cv.VideoCapture(f"rtmp://172.17.0.1:1936/live/{stream_name}", cv.CAP_FFMPEG)
+    cap = cv.VideoCapture(f"rtmp://172.30.161.103:1936/live/{stream_name}", cv.CAP_FFMPEG)
     while(cap.isOpened()):
 
         #print('IsOpen!')  
